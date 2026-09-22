@@ -3,6 +3,8 @@ import express from "express";
 import cors from "cors";
 import { connectDB } from "./config/db";
 import authRoutes from "./routes/authRoutes";
+import adminAuthRoutes from "./routes/adminAuthRoutes";
+import adminUserRoutes from "./routes/adminUserRoutes";
 import employeeRoutes from "./routes/employeeRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
 
@@ -14,6 +16,7 @@ app.use(
     origin: process.env.CLIENT_URL?.split(",") || "*",
   })
 );
+
 app.use(express.json());
 
 app.get("/", (_req, res) => {
@@ -21,6 +24,9 @@ app.get("/", (_req, res) => {
     message: "Absher backend API is running",
   });
 });
+
+app.use("/api/admin/auth", adminAuthRoutes);
+app.use("/api/admin/users", adminUserRoutes);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/employees", employeeRoutes);

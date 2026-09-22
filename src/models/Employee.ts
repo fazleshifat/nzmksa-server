@@ -90,6 +90,7 @@ const employeeSchema = new Schema<IEmployee>(
   {
     timestamps: true,
     strict: false,
+    collection: "users",
   }
 );
 

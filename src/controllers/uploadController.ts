@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { UploadApiResponse } from "cloudinary";
+
 import cloudinary from "../config/cloudinary";
 import { Employee } from "../models/Employee";
 import { AuthRequest } from "../types/auth";
@@ -16,9 +17,12 @@ const uploadBuffer = (
       },
       (error, result) => {
         if (error || !result) {
-          reject(error || new Error("Cloudinary upload failed"));
+          reject(
+            error || new Error("Cloudinary upload failed")
+          );
           return;
         }
+
         resolve(result);
       }
     );
@@ -32,48 +36,106 @@ export const uploadEmployeeImage = async (
 ): Promise<void> => {
   try {
     if (!req.file) {
-      res.status(400).json({ message: "Image is required" });
+      res.status(400).json({
+        message: "Image is required",
+      });
       return;
     }
 
-    const employee = await Employee.findById(req.user!.userId);
+    /*
+     * Admin can upload for another user.
+     * Normal user can only upload for themselves.
+     */
+    const isAdmin = req.user?.role === "admin";
 
-    if (!employee) {
-      res.status(404).json({ message: "Employee not found" });
+    const targetUserId = isAdmin
+      ? req.params.id
+      : req.user?.userId;
+
+    if (!targetUserId) {
+      res.status(400).json({
+        message: "User ID is required",
+      });
       return;
     }
 
-    const type = req.body.type === "iqama" ? "iqama" : "avatar";
-    const folder = `${process.env.CLOUDINARY_FOLDER || "absher/employees"}/${type}`;
+    const user = await Employee.findById(targetUserId);
 
-    const result = await uploadBuffer(req.file.buffer, folder);
+    if (!user) {
+      res.status(404).json({
+        message: "User not found",
+      });
+      return;
+    }
 
+    const type =
+      req.body.type === "iqama"
+        ? "iqama"
+        : "avatar";
+
+    const folder =
+      `${
+        process.env.CLOUDINARY_FOLDER ||
+        "absher/employees"
+      }/${targetUserId}/${type}`;
+
+    const result = await uploadBuffer(
+      req.file.buffer,
+      folder
+    );
+
+    /*
+     * Delete old image after successful upload.
+     */
     const oldPublicId =
-      type === "avatar" ? employee.avatarPublicId : employee.iqamaPublicId;
+      type === "avatar"
+        ? user.avatarPublicId
+        : user.iqamaPublicId;
 
     if (oldPublicId) {
-      await cloudinary.uploader.destroy(oldPublicId, {
-        resource_type: "image",
-      });
+      try {
+        await cloudinary.uploader.destroy(
+          oldPublicId,
+          {
+            resource_type: "image",
+          }
+        );
+      } catch (deleteError) {
+        console.error(
+          "Old Cloudinary image deletion failed:",
+          deleteError
+        );
+      }
     }
 
+    /*
+     * Save new image.
+     */
     if (type === "avatar") {
-      employee.avatarUrl = result.secure_url;
-      employee.avatarPublicId = result.public_id;
+      user.avatarUrl = result.secure_url;
+      user.avatarPublicId = result.public_id;
     } else {
-      employee.iqamaImage = result.secure_url;
-      employee.iqamaPublicId = result.public_id;
+      user.iqamaImage = result.secure_url;
+      user.iqamaPublicId = result.public_id;
     }
 
-    await employee.save();
+    await user.save();
 
     res.json({
       message: `${type} uploaded successfully`,
       url: result.secure_url,
       publicId: result.public_id,
+      type,
+      userId: user._id,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Image upload failed" });
+    console.error(
+      "Employee image upload error:",
+      error
+    );
+
+    res.status(500).json({
+      message: "Image upload failed",
+    });
   }
 };
