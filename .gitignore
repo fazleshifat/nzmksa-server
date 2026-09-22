@@ -45,3 +45,5 @@ temp/
 
 # Local configuration
 *.local
+.vercel
+.env*
