@@ -3,6 +3,7 @@ import cors from "cors";
 
 import authRoutes from "./routes/authRoutes";
 import adminAuthRoutes from "./routes/adminAuthRoutes";
+import adminRoutes from "./routes/adminRoutes";
 import adminUserRoutes from "./routes/adminUserRoutes";
 import employeeRoutes from "./routes/employeeRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
@@ -25,6 +26,7 @@ app.get("/", (_req, res) => {
 
 app.use("/api/admin/auth", adminAuthRoutes);
 app.use("/api/admin/users", adminUserRoutes);
+app.use("/api/admin/all-admins", adminRoutes);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/employees", employeeRoutes);
