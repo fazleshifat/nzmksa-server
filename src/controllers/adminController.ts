@@ -23,3 +23,36 @@ export const getAllAdmins = async (
         });
     }
 };
+
+/* ============================================================
+   GET ADMIN BY ID
+============================================================ */
+
+export const getAdminById = async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const { id } = req.params;
+
+        const admin = await Admin.findById(id)
+            .select("_id name email role active createdAt updatedAt")
+            .lean();
+
+        if (!admin) {
+            return res.status(404).json({
+                message: "Administrator not found",
+            });
+        }
+
+        return res.status(200).json({
+            admin,
+        });
+    } catch (error) {
+        console.error("Failed to fetch administrator:", error);
+
+        return res.status(500).json({
+            message: "Failed to load administrator",
+        });
+    }
+};

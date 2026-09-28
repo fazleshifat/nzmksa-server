@@ -5,6 +5,7 @@ import authRoutes from "./routes/authRoutes";
 import adminAuthRoutes from "./routes/adminAuthRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import adminUserRoutes from "./routes/adminUserRoutes";
+import adminProfileRoutes from "./routes/adminProfileRoutes";
 import employeeRoutes from "./routes/employeeRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
 
@@ -24,12 +25,47 @@ app.get("/", (_req, res) => {
     });
 });
 
-app.use("/api/admin/auth", adminAuthRoutes);
-app.use("/api/admin/users", adminUserRoutes);
-app.use("/api/admin/all-admins", adminRoutes);
+/* ============================================================
+   ADMIN ROUTES
+============================================================ */
 
-app.use("/api/auth", authRoutes);
-app.use("/api/employees", employeeRoutes);
-app.use("/api/uploads", uploadRoutes);
+app.use(
+    "/api/admin/auth",
+    adminAuthRoutes
+);
+
+app.use(
+    "/api/admin/users",
+    adminUserRoutes
+);
+
+app.use(
+    "/api/admin/all-admins",
+    adminRoutes
+);
+
+app.use(
+    "/api/admin/profile",
+    adminProfileRoutes
+);
+
+/* ============================================================
+   USER ROUTES
+============================================================ */
+
+app.use(
+    "/api/auth",
+    authRoutes
+);
+
+app.use(
+    "/api/employees",
+    employeeRoutes
+);
+
+app.use(
+    "/api/uploads",
+    uploadRoutes
+);
 
 export default app;
