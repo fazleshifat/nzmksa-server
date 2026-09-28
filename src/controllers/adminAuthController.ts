@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { Admin } from "../models/Admin";
 import { signToken } from "../utils/token";
+import { createSession } from "../utils/createSession";
 
 export const adminLogin = async (
     req: Request,
@@ -40,9 +41,19 @@ export const adminLogin = async (
             return;
         }
 
+        const session = await createSession(
+            req,
+            admin.email,
+            admin.name,
+            admin.role === "super_admin"
+                ? "super_admin"
+                : "admin"
+        );
+
         const token = signToken({
             userId: admin._id.toString(),
             role: "admin",
+            sessionId: session._id.toString(),
         });
 
         res.json({

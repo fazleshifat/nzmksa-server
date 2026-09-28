@@ -6,6 +6,7 @@ export interface AuthPayload {
   userId: string;
   residentIdNumber?: string;
   role: UserRole;
+  sessionId: string;
 }
 
 export interface AuthRequest extends Request {

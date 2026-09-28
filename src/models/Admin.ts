@@ -1,10 +1,12 @@
 import mongoose, { Document, Schema } from "mongoose";
 
+export type AdminRole = "admin" | "super_admin";
+
 export interface IAdmin extends Document {
     name: string;
     email: string;
     password: string;
-    role: "admin";
+    role: AdminRole;
     active: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -35,7 +37,7 @@ const adminSchema = new Schema<IAdmin>(
 
         role: {
             type: String,
-            enum: ["admin"],
+            enum: ["admin", "super_admin"],
             default: "admin",
             required: true,
         },

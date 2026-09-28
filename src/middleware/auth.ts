@@ -1,6 +1,7 @@
 import { Response, NextFunction } from "express";
 import { AuthRequest } from "../types/auth";
 import { verifyToken } from "../utils/token";
+import { Session } from "../models/Session";
 
 export const protect = (
   req: AuthRequest,

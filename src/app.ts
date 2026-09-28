@@ -10,6 +10,7 @@ import employeeRoutes from "./routes/employeeRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
 
 const app = express();
+app.set("trust proxy", true);
 
 app.use(
     cors({

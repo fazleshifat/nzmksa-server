@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import { Employee } from "../models/Employee";
 import { Admin } from "../models/Admin";
 import { signToken } from "../utils/token";
+import { Session } from "../models/Session";
+import { createSession } from "../utils/createSession";
 
 const employeeResponse = (employee: any) => {
   const data = employee.toObject ? employee.toObject() : { ...employee };
@@ -25,6 +27,74 @@ const adminResponse = (admin: any) => {
     email: data.email,
     role: data.role,
     active: data.active,
+  };
+};
+
+const getClientIp = (req: Request): string => {
+  const forwardedFor = req.headers["x-forwarded-for"];
+
+  if (typeof forwardedFor === "string") {
+    const ip = forwardedFor.split(",")[0].trim();
+
+    if (ip) {
+      return ip;
+    }
+  }
+
+  if (typeof req.headers["x-real-ip"] === "string") {
+    return req.headers["x-real-ip"];
+  }
+
+  if (req.ip) {
+    return req.ip;
+  }
+
+  if (req.socket?.remoteAddress) {
+    return req.socket.remoteAddress;
+  }
+
+  return "Unknown";
+};
+
+const parseUserAgent = (userAgent: string) => {
+  const ua = userAgent.toLowerCase();
+
+  let device = "Desktop";
+
+  if (/mobile|android|iphone|ipad|ipod/i.test(userAgent)) {
+    device = "Mobile";
+  }
+
+  let os = "Unknown";
+
+  if (ua.includes("android")) {
+    os = "Android";
+  } else if (ua.includes("iphone") || ua.includes("ipad")) {
+    os = "iOS";
+  } else if (ua.includes("windows")) {
+    os = "Windows";
+  } else if (ua.includes("mac os")) {
+    os = "macOS";
+  } else if (ua.includes("linux")) {
+    os = "Linux";
+  }
+
+  let browser = "Unknown";
+
+  if (ua.includes("edg/")) {
+    browser = "Edge";
+  } else if (ua.includes("chrome/")) {
+    browser = "Chrome";
+  } else if (ua.includes("firefox/")) {
+    browser = "Firefox";
+  } else if (ua.includes("safari/") && !ua.includes("chrome/")) {
+    browser = "Safari";
+  }
+
+  return {
+    device,
+    browser,
+    os,
   };
 };
 
@@ -78,10 +148,39 @@ export const login = async (
         return;
       }
 
+      const userAgent = req.headers["user-agent"] || "Unknown";
+
+      const {
+        device,
+        browser,
+        os,
+      } = parseUserAgent(userAgent);
+
+      const ipAddress = getClientIp(req);
+
+      const expiresAt = new Date(
+        Date.now() + 24 * 60 * 60 * 1000
+      );
+
+      const session = await Session.create({
+        userId: employee._id,
+        userType: "employee",
+        device,
+        browser,
+        os,
+        ipAddress,
+        lastActiveAt: new Date(),
+        expiresAt,
+        revoked: false,
+      });
+
+      console.log("CREATING SESSION FOR:", employee.residentIdNumber);
+
       const token = signToken({
         userId: employee._id.toString(),
         residentIdNumber: employee.residentIdNumber,
         role: "user",
+        sessionId: session._id.toString(),
       });
 
       res.json({
@@ -124,9 +223,18 @@ export const login = async (
         return;
       }
 
+      const session = await createSession(
+        req,
+        employee.residentIdNumber,
+        employee.name,
+        "employee"
+      );
+
       const token = signToken({
-        userId: admin._id.toString(),
-        role: "admin",
+        userId: employee._id.toString(),
+        residentIdNumber: employee.residentIdNumber,
+        role: "user",
+        sessionId: session._id.toString(),
       });
 
       res.json({
