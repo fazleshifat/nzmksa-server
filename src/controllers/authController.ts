@@ -3,7 +3,6 @@ import bcrypt from "bcryptjs";
 import { Employee } from "../models/Employee";
 import { Admin } from "../models/Admin";
 import { signToken } from "../utils/token";
-import { Session } from "../models/Session";
 import { createSession } from "../utils/createSession";
 
 const employeeResponse = (employee: any) => {
@@ -105,15 +104,6 @@ export const login = async (
   try {
     const { residentIdNumber, password, email } = req.body;
 
-    /*
-     * The existing frontend sends `residentIdNumber`.
-     *
-     * We will treat that field as:
-     * - Resident ID for normal users
-     * - Email for admins
-     *
-     * We also accept `email` in case the frontend sends that later.
-     */
     const loginIdentifier = String(
       email || residentIdNumber || ""
     ).trim();
@@ -127,7 +117,7 @@ export const login = async (
 
     /*
      * ---------------------------------------------------------
-     * 1. Try normal user login
+     * 1. Try employee login
      * ---------------------------------------------------------
      */
 
@@ -148,33 +138,12 @@ export const login = async (
         return;
       }
 
-      const userAgent = req.headers["user-agent"] || "Unknown";
-
-      const {
-        device,
-        browser,
-        os,
-      } = parseUserAgent(userAgent);
-
-      const ipAddress = getClientIp(req);
-
-      const expiresAt = new Date(
-        Date.now() + 24 * 60 * 60 * 1000
+      const session = await createSession(
+        req,
+        employee.residentIdNumber,
+        employee.name,
+        "employee"
       );
-
-      const session = await Session.create({
-        userId: employee._id,
-        userType: "employee",
-        device,
-        browser,
-        os,
-        ipAddress,
-        lastActiveAt: new Date(),
-        expiresAt,
-        revoked: false,
-      });
-
-      console.log("CREATING SESSION FOR:", employee.residentIdNumber);
 
       const token = signToken({
         userId: employee._id.toString(),
@@ -195,7 +164,7 @@ export const login = async (
 
     /*
      * ---------------------------------------------------------
-     * 2. If no user found, try admin login
+     * 2. Try admin login
      * ---------------------------------------------------------
      */
 
@@ -225,20 +194,21 @@ export const login = async (
 
       const session = await createSession(
         req,
-        employee.residentIdNumber,
-        employee.name,
-        "employee"
+        admin.email,
+        admin.name,
+        admin.role === "super_admin"
+          ? "super_admin"
+          : "admin"
       );
 
       const token = signToken({
-        userId: employee._id.toString(),
-        residentIdNumber: employee.residentIdNumber,
-        role: "user",
+        userId: admin._id.toString(),
+        role: "admin",
         sessionId: session._id.toString(),
       });
 
       res.json({
-        message: "Login successful",
+        message: "Admin login successful",
         token,
         role: "admin",
         admin: adminResponse(admin),
@@ -257,7 +227,7 @@ export const login = async (
       message: "Invalid credentials",
     });
   } catch (error) {
-    console.error(error);
+    console.error("LOGIN ERROR:", error);
 
     res.status(500).json({
       message: "Login failed",
