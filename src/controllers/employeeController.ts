@@ -4,9 +4,11 @@ import { AuthRequest } from "../types/auth";
 
 const clean = (employee: any) => {
   const data = employee.toObject ? employee.toObject() : { ...employee };
+
   delete data.password;
   delete data.avatarPublicId;
   delete data.iqamaPublicId;
+
   return data;
 };
 
@@ -22,24 +24,37 @@ export const getMyProfile = async (
       return;
     }
 
-    res.json({ employee: clean(employee) });
+    res.json({
+      employee: clean(employee),
+    });
   } catch {
-    res.status(500).json({ message: "Failed to load profile" });
+    res.status(500).json({
+      message: "Failed to load profile",
+    });
   }
 };
 
 export const listEmployees = async (
-  _req: AuthRequest,
+  req: AuthRequest,
   res: Response
 ): Promise<void> => {
   try {
-    const employees = await Employee.find().sort({ name: 1 });
+    // Default: newest → oldest
+    // ?sort=asc  → oldest → newest
+    // ?sort=desc → newest → oldest
+    const sortOrder = req.query.sort === "asc" ? 1 : -1;
+
+    const employees = await Employee.find().sort({
+      _id: sortOrder,
+    });
 
     res.json({
       count: employees.length,
       employees: employees.map(clean),
     });
   } catch {
-    res.status(500).json({ message: "Failed to load employees" });
+    res.status(500).json({
+      message: "Failed to load employees",
+    });
   }
 };
