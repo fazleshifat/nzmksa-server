@@ -45,8 +45,8 @@ export const adminLogin = async (
             req,
             admin.email,
             admin.name,
-            admin.role === "super_admin"
-                ? "super_admin"
+            admin.role === "superadmin"
+                ? "superadmin"
                 : "admin"
         );
 

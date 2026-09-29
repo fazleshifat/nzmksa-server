@@ -6,7 +6,9 @@ export const getAllAdmins = async (
     res: Response
 ) => {
     try {
-        const admins = await Admin.find({})
+        const admins = await Admin.find({
+            role: "admin",
+        })
             .select("_id name email active createdAt")
             .sort({ createdAt: -1 })
             .lean();
@@ -16,7 +18,10 @@ export const getAllAdmins = async (
             total: admins.length,
         });
     } catch (error) {
-        console.error("Failed to fetch administrators:", error);
+        console.error(
+            "Failed to fetch administrators:",
+            error
+        );
 
         return res.status(500).json({
             message: "Failed to load administrators",
@@ -35,8 +40,13 @@ export const getAdminById = async (
     try {
         const { id } = req.params;
 
-        const admin = await Admin.findById(id)
-            .select("_id name email role active createdAt updatedAt")
+        const admin = await Admin.findOne({
+            _id: id,
+            role: "admin",
+        })
+            .select(
+                "_id name email active createdAt updatedAt"
+            )
             .lean();
 
         if (!admin) {
@@ -49,7 +59,10 @@ export const getAdminById = async (
             admin,
         });
     } catch (error) {
-        console.error("Failed to fetch administrator:", error);
+        console.error(
+            "Failed to fetch administrator:",
+            error
+        );
 
         return res.status(500).json({
             message: "Failed to load administrator",

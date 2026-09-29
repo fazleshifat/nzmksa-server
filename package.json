@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed": "tsx src/seed.ts",
-    "seed:admin": "tsx src/seedAdmin.ts"
+    "seed:superadmin": "tsx src/seed.ts"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

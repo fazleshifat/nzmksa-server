@@ -3,11 +3,12 @@ import jwt from "jsonwebtoken";
 
 interface AdminTokenPayload {
     userId: string;
-    role: "admin";
+    role: "admin" | "superadmin";
 }
 
 export interface AdminRequest extends Request {
     adminId?: string;
+    adminRole?: "admin" | "superadmin";
 }
 
 export default function adminAuthMiddleware(
@@ -43,16 +44,17 @@ export default function adminAuthMiddleware(
             });
         }
 
-        if (decoded.role !== "admin") {
+        if (
+            decoded.role !== "admin" &&
+            decoded.role !== "superadmin"
+        ) {
             return res.status(403).json({
                 message: "Admin access required.",
             });
         }
 
-        // Your JWT calls this field userId.
-        // We store it as adminId on the request
-        // so the profile controller can use it.
         req.adminId = decoded.userId;
+        req.adminRole = decoded.role;
 
         next();
     } catch (error) {

@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 
 import authRoutes from "./routes/authRoutes";
+import sessionRoutes from "./routes/sessionRoutes";
 import adminAuthRoutes from "./routes/adminAuthRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import adminUserRoutes from "./routes/adminUserRoutes";
@@ -25,6 +26,15 @@ app.get("/", (_req, res) => {
         message: "Absher backend API is running",
     });
 });
+
+/* ============================================================
+   Super ADMIN ROUTES
+============================================================ */
+
+app.use(
+    "/api/admin/sessions",
+    sessionRoutes
+);
 
 /* ============================================================
    ADMIN ROUTES

@@ -196,21 +196,21 @@ export const login = async (
         req,
         admin.email,
         admin.name,
-        admin.role === "super_admin"
-          ? "super_admin"
+        admin.role === "superadmin"
+          ? "superadmin"
           : "admin"
       );
 
       const token = signToken({
         userId: admin._id.toString(),
-        role: "admin",
+        role: admin.role,
         sessionId: session._id.toString(),
       });
 
       res.json({
         message: "Admin login successful",
         token,
-        role: "admin",
+        role: admin.role,
         admin: adminResponse(admin),
       });
 
@@ -242,11 +242,14 @@ export const me = async (
   try {
     /*
      * ---------------------------------------------------------
-     * Admin session
+     * Admin / Super Admin session
      * ---------------------------------------------------------
      */
 
-    if (req.user.role === "admin") {
+    if (
+      req.user.role === "admin" ||
+      req.user.role === "superadmin"
+    ) {
       const admin = await Admin.findById(req.user.userId);
 
       if (!admin) {
@@ -265,7 +268,7 @@ export const me = async (
 
       res.json({
         admin: adminResponse(admin),
-        role: "admin",
+        role: admin.role,
       });
 
       return;

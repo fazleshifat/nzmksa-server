@@ -1,7 +1,7 @@
 import { Request } from "express";
 import { Session } from "../models/Session";
 
-type UserType = "employee" | "admin" | "super_admin";
+type UserType = "employee" | "admin" | "superadmin";
 
 const getClientIp = (req: Request): string => {
   const forwardedFor = req.headers["x-forwarded-for"];
