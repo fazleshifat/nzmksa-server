@@ -4,6 +4,7 @@ import { Employee } from "../models/Employee";
 import { Admin } from "../models/Admin";
 import { signToken } from "../utils/token";
 import { createSession } from "../utils/createSession";
+import { Session } from "../models/Session";
 
 const employeeResponse = (employee: any) => {
   const data = employee.toObject ? employee.toObject() : { ...employee };
@@ -298,6 +299,48 @@ export const me = async (
 
     res.status(500).json({
       message: "Failed to load account",
+    });
+  }
+};
+
+export const logout = async (
+  req: any,
+  res: Response
+): Promise<void> => {
+  try {
+    const sessionId = req.user?.sessionId;
+
+    if (!sessionId) {
+      res.status(400).json({
+        message: "Session ID is missing",
+      });
+      return;
+    }
+
+    const session = await Session.findByIdAndUpdate(
+      sessionId,
+      {
+        revoked: true,
+        loggedOutAt: new Date(),
+      },
+      { new: true }
+    );
+
+    if (!session) {
+      res.status(404).json({
+        message: "Session not found",
+      });
+      return;
+    }
+
+    res.json({
+      message: "Logout successful",
+    });
+  } catch (error) {
+    console.error("LOGOUT ERROR:", error);
+
+    res.status(500).json({
+      message: "Logout failed",
     });
   }
 };
