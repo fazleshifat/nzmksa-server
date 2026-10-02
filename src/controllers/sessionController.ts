@@ -40,7 +40,7 @@ export const getAllSessions = async (
 
             if (isRevoked) {
                 status = "revoked";
-            } else if (session.loggedOutAt) {
+            } else if (session?.loggedOutAt) {
                 status = "logged_out";
             } else if (isExpired) {
                 status = "expired";

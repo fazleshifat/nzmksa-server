@@ -317,20 +317,20 @@ export const logout = async (
       return;
     }
 
-    const session = await Session.findByIdAndUpdate(
-      sessionId,
-      {
-        revoked: true,
-        loggedOutAt: new Date(),
-      },
-      { new: true }
-    );
+    const session = await Session.findById(sessionId);
 
     if (!session) {
       res.status(404).json({
         message: "Session not found",
       });
       return;
+    }
+
+    if (!session.loggedOutAt && !session.revoked) {
+      session.loggedOutAt = new Date();
+      session.revoked = false;
+
+      await session.save();
     }
 
     res.json({
