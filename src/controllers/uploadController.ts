@@ -43,10 +43,12 @@ export const uploadEmployeeImage = async (
     }
 
     /*
-     * Admin can upload for another user.
+     * Admin and Superadmin can upload for another user.
      * Normal user can only upload for themselves.
      */
-    const isAdmin = req.user?.role === "admin";
+    const isAdmin =
+      req.user?.role === "admin" ||
+      req.user?.role === "superadmin";
 
     const targetUserId = isAdmin
       ? req.params.id
@@ -74,9 +76,8 @@ export const uploadEmployeeImage = async (
         : "avatar";
 
     const folder =
-      `${
-        process.env.CLOUDINARY_FOLDER ||
-        "absher/employees"
+      `${process.env.CLOUDINARY_FOLDER ||
+      "absher/employees"
       }/${targetUserId}/${type}`;
 
     const result = await uploadBuffer(
