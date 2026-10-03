@@ -1,23 +1,41 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
+
 import { Employee } from "../models/Employee";
 import { Admin } from "../models/Admin";
+
 import { signToken } from "../utils/token";
 import { createSession } from "../utils/createSession";
+
 import { Session } from "../models/Session";
 
+// ============================================================================
+// EMPLOYEE RESPONSE
+// ============================================================================
+
 const employeeResponse = (employee: any) => {
-  const data = employee.toObject ? employee.toObject() : { ...employee };
+  const data = employee.toObject
+    ? employee.toObject()
+    : { ...employee };
 
   delete data.password;
   delete data.avatarPublicId;
   delete data.iqamaPublicId;
 
+  // Never send WebAuthn credentials to frontend.
+  delete data.passkeys;
+
   return data;
 };
 
+// ============================================================================
+// ADMIN RESPONSE
+// ============================================================================
+
 const adminResponse = (admin: any) => {
-  const data = admin.toObject ? admin.toObject() : { ...admin };
+  const data = admin.toObject
+    ? admin.toObject()
+    : { ...admin };
 
   delete data.password;
 
@@ -30,18 +48,33 @@ const adminResponse = (admin: any) => {
   };
 };
 
-const getClientIp = (req: Request): string => {
-  const forwardedFor = req.headers["x-forwarded-for"];
+// ============================================================================
+// CLIENT IP
+// ============================================================================
 
-  if (typeof forwardedFor === "string") {
-    const ip = forwardedFor.split(",")[0].trim();
+const getClientIp = (
+  req: Request
+): string => {
+  const forwardedFor =
+    req.headers["x-forwarded-for"];
+
+  if (
+    typeof forwardedFor === "string"
+  ) {
+    const ip =
+      forwardedFor
+        .split(",")[0]
+        .trim();
 
     if (ip) {
       return ip;
     }
   }
 
-  if (typeof req.headers["x-real-ip"] === "string") {
+  if (
+    typeof req.headers["x-real-ip"] ===
+    "string"
+  ) {
     return req.headers["x-real-ip"];
   }
 
@@ -56,12 +89,23 @@ const getClientIp = (req: Request): string => {
   return "Unknown";
 };
 
-const parseUserAgent = (userAgent: string) => {
-  const ua = userAgent.toLowerCase();
+// ============================================================================
+// USER AGENT
+// ============================================================================
+
+const parseUserAgent = (
+  userAgent: string
+) => {
+  const ua =
+    userAgent.toLowerCase();
 
   let device = "Desktop";
 
-  if (/mobile|android|iphone|ipad|ipod/i.test(userAgent)) {
+  if (
+    /mobile|android|iphone|ipad|ipod/i.test(
+      userAgent
+    )
+  ) {
     device = "Mobile";
   }
 
@@ -69,13 +113,22 @@ const parseUserAgent = (userAgent: string) => {
 
   if (ua.includes("android")) {
     os = "Android";
-  } else if (ua.includes("iphone") || ua.includes("ipad")) {
+  } else if (
+    ua.includes("iphone") ||
+    ua.includes("ipad")
+  ) {
     os = "iOS";
-  } else if (ua.includes("windows")) {
+  } else if (
+    ua.includes("windows")
+  ) {
     os = "Windows";
-  } else if (ua.includes("mac os")) {
+  } else if (
+    ua.includes("mac os")
+  ) {
     os = "macOS";
-  } else if (ua.includes("linux")) {
+  } else if (
+    ua.includes("linux")
+  ) {
     os = "Linux";
   }
 
@@ -83,11 +136,18 @@ const parseUserAgent = (userAgent: string) => {
 
   if (ua.includes("edg/")) {
     browser = "Edge";
-  } else if (ua.includes("chrome/")) {
+  } else if (
+    ua.includes("chrome/")
+  ) {
     browser = "Chrome";
-  } else if (ua.includes("firefox/")) {
+  } else if (
+    ua.includes("firefox/")
+  ) {
     browser = "Firefox";
-  } else if (ua.includes("safari/") && !ua.includes("chrome/")) {
+  } else if (
+    ua.includes("safari/") &&
+    !ua.includes("chrome/")
+  ) {
     browser = "Safari";
   }
 
@@ -98,137 +158,220 @@ const parseUserAgent = (userAgent: string) => {
   };
 };
 
+// ============================================================================
+// LOGIN
+// ============================================================================
+
 export const login = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
-    const { residentIdNumber, password, email } = req.body;
+    const {
+      residentIdNumber,
+      password,
+      email,
+    } = req.body;
 
-    const loginIdentifier = String(
-      email || residentIdNumber || ""
-    ).trim();
+    const loginIdentifier =
+      String(
+        email ||
+        residentIdNumber ||
+        ""
+      ).trim();
 
-    if (!loginIdentifier || !password) {
+    if (
+      !loginIdentifier ||
+      !password
+    ) {
       res.status(400).json({
-        message: "Resident ID / Email and password are required",
+        message:
+          "Resident ID / Email and password are required",
       });
+
       return;
     }
 
     /*
-     * ---------------------------------------------------------
+     * =========================================================
      * 1. Try employee login
-     * ---------------------------------------------------------
+     * =========================================================
      */
 
-    const employee = await Employee.findOne({
-      residentIdNumber: loginIdentifier,
-    }).select("+password");
+    const employee =
+      await Employee.findOne({
+        residentIdNumber:
+          loginIdentifier,
+      }).select("+password");
 
     if (employee) {
-      const validPassword = await bcrypt.compare(
-        password,
-        employee.password
-      );
+      const validPassword =
+        await bcrypt.compare(
+          password,
+          employee.password
+        );
 
       if (!validPassword) {
         res.status(401).json({
-          message: "Invalid credentials",
+          message:
+            "Invalid credentials",
         });
+
         return;
       }
 
-      const session = await createSession(
-        req,
-        employee.residentIdNumber,
-        employee.name,
-        "employee"
-      );
+      /*
+       * -------------------------------------------------------
+       * Create normal employee session
+       * -------------------------------------------------------
+       */
 
-      const token = signToken({
-        userId: employee._id.toString(),
-        residentIdNumber: employee.residentIdNumber,
-        role: "user",
-        sessionId: session._id.toString(),
-      });
+      const session =
+        await createSession(
+          req,
+          employee.residentIdNumber,
+          employee.name,
+          "employee"
+        );
+
+      const token =
+        signToken({
+          userId:
+            employee._id.toString(),
+
+          residentIdNumber:
+            employee.residentIdNumber,
+
+          role: "user",
+
+          sessionId:
+            session._id.toString(),
+        });
+
+      /*
+       * -------------------------------------------------------
+       * Passkey status
+       *
+       * We do NOT send the actual passkeys.
+       * Only tell frontend whether at least
+       * one passkey already exists.
+       * -------------------------------------------------------
+       */
+
+      const hasPasskey =
+        Array.isArray(
+          employee.passkeys
+        ) &&
+        employee.passkeys.length > 0;
 
       res.json({
-        message: "Login successful",
+        message:
+          "Login successful",
+
         token,
+
         role: "user",
-        user: employeeResponse(employee),
+
+        user:
+          employeeResponse(
+            employee
+          ),
+
+        hasPasskey,
       });
 
       return;
     }
 
     /*
-     * ---------------------------------------------------------
+     * =========================================================
      * 2. Try admin login
-     * ---------------------------------------------------------
+     * =========================================================
      */
 
-    const admin = await Admin.findOne({
-      email: loginIdentifier.toLowerCase(),
-    }).select("+password");
+    const admin =
+      await Admin.findOne({
+        email:
+          loginIdentifier.toLowerCase(),
+      }).select("+password");
 
     if (admin) {
       if (!admin.active) {
         res.status(403).json({
-          message: "Admin account is inactive",
+          message:
+            "Admin account is inactive",
         });
+
         return;
       }
 
-      const validPassword = await bcrypt.compare(
-        password,
-        admin.password
-      );
+      const validPassword =
+        await bcrypt.compare(
+          password,
+          admin.password
+        );
 
       if (!validPassword) {
         res.status(401).json({
-          message: "Invalid credentials",
+          message:
+            "Invalid credentials",
         });
+
         return;
       }
 
-      const session = await createSession(
-        req,
-        admin.email,
-        admin.name,
-        admin.role === "superadmin"
-          ? "superadmin"
-          : "admin"
-      );
+      const session =
+        await createSession(
+          req,
+          admin.email,
+          admin.name,
+          admin.role ===
+            "superadmin"
+            ? "superadmin"
+            : "admin"
+        );
 
-      const token = signToken({
-        userId: admin._id.toString(),
-        role: admin.role,
-        sessionId: session._id.toString(),
-      });
+      const token =
+        signToken({
+          userId:
+            admin._id.toString(),
+
+          role: admin.role,
+
+          sessionId:
+            session._id.toString(),
+        });
 
       res.json({
-        message: "Admin login successful",
+        message:
+          "Admin login successful",
+
         token,
+
         role: admin.role,
-        admin: adminResponse(admin),
+
+        admin:
+          adminResponse(admin),
       });
 
       return;
     }
 
     /*
-     * ---------------------------------------------------------
+     * =========================================================
      * 3. Nothing matched
-     * ---------------------------------------------------------
+     * =========================================================
      */
 
     res.status(401).json({
-      message: "Invalid credentials",
+      message:
+        "Invalid credentials",
     });
   } catch (error) {
-    console.error("LOGIN ERROR:", error);
+    console.error(
+      "LOGIN ERROR:",
+      error
+    );
 
     res.status(500).json({
       message: "Login failed",
@@ -236,39 +379,52 @@ export const login = async (
   }
 };
 
+// ============================================================================
+// ME
+// ============================================================================
+
 export const me = async (
   req: any,
   res: Response
 ): Promise<void> => {
   try {
     /*
-     * ---------------------------------------------------------
+     * =========================================================
      * Admin / Super Admin session
-     * ---------------------------------------------------------
+     * =========================================================
      */
 
     if (
       req.user.role === "admin" ||
       req.user.role === "superadmin"
     ) {
-      const admin = await Admin.findById(req.user.userId);
+      const admin =
+        await Admin.findById(
+          req.user.userId
+        );
 
       if (!admin) {
         res.status(404).json({
-          message: "Admin not found",
+          message:
+            "Admin not found",
         });
+
         return;
       }
 
       if (!admin.active) {
         res.status(403).json({
-          message: "Admin account is inactive",
+          message:
+            "Admin account is inactive",
         });
+
         return;
       }
 
       res.json({
-        admin: adminResponse(admin),
+        admin:
+          adminResponse(admin),
+
         role: admin.role,
       });
 
@@ -276,68 +432,109 @@ export const me = async (
     }
 
     /*
-     * ---------------------------------------------------------
-     * Normal user session
-     * ---------------------------------------------------------
+     * =========================================================
+     * Normal employee session
+     * =========================================================
      */
 
-    const employee = await Employee.findById(req.user.userId);
+    const employee =
+      await Employee.findById(
+        req.user.userId
+      );
 
     if (!employee) {
       res.status(404).json({
-        message: "User not found",
+        message:
+          "User not found",
       });
+
       return;
     }
 
     res.json({
-      user: employeeResponse(employee),
+      user:
+        employeeResponse(
+          employee
+        ),
+
       role: "user",
+
+      /*
+       * Only expose whether a passkey exists.
+       * Never expose the credential itself.
+       */
+      hasPasskey:
+        Array.isArray(
+          employee.passkeys
+        ) &&
+        employee.passkeys.length > 0,
     });
   } catch (error) {
     console.error(error);
 
     res.status(500).json({
-      message: "Failed to load account",
+      message:
+        "Failed to load account",
     });
   }
 };
+
+// ============================================================================
+// LOGOUT
+// ============================================================================
 
 export const logout = async (
   req: any,
   res: Response
 ): Promise<void> => {
   try {
-    const sessionId = req.user?.sessionId;
+    const sessionId =
+      req.user?.sessionId;
 
     if (!sessionId) {
       res.status(400).json({
-        message: "Session ID is missing",
+        message:
+          "Session ID is missing",
       });
+
       return;
     }
 
-    const session = await Session.findById(sessionId);
+    const session =
+      await Session.findById(
+        sessionId
+      );
 
     if (!session) {
       res.status(404).json({
-        message: "Session not found",
+        message:
+          "Session not found",
       });
+
       return;
     }
 
-    if (!session.loggedOutAt && !session.revoked) {
-      session.loggedOutAt = new Date();
+    if (
+      !session.loggedOutAt &&
+      !session.revoked
+    ) {
+      session.loggedOutAt =
+        new Date();
+
       session.revoked = false;
 
       await session.save();
     }
 
     res.json({
-      message: "Logout successful",
+      message:
+        "Logout successful",
     });
   } catch (error) {
-    console.error("LOGOUT ERROR:", error);
+    console.error(
+      "LOGOUT ERROR:",
+      error
+    );
 
     res.status(500).json({
       message: "Logout failed",

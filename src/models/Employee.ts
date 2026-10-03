@@ -1,5 +1,14 @@
 import mongoose, { Document, Schema } from "mongoose";
 
+export interface IPasskey {
+  credentialId: string;
+  publicKey: Buffer;
+  counter: number;
+  transports?: string[];
+  deviceType?: string;
+  backedUp?: boolean;
+}
+
 export interface IEmployee extends Document {
   [key: string]: any;
 
@@ -35,9 +44,48 @@ export interface IEmployee extends Document {
   iqamaImage?: any;
   iqamaPublicId?: any;
 
+  passkeys?: IPasskey[];
+
   createdAt: Date;
   updatedAt: Date;
 }
+
+const passkeySchema = new Schema<IPasskey>(
+  {
+    credentialId: {
+      type: String,
+      required: true,
+    },
+
+    publicKey: {
+      type: Buffer,
+      required: true,
+    },
+
+    counter: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+
+    transports: {
+      type: [String],
+      default: undefined,
+    },
+
+    deviceType: {
+      type: String,
+    },
+
+    backedUp: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  {
+    _id: false,
+  }
+);
 
 const employeeSchema = new Schema<IEmployee>(
   {
@@ -48,6 +96,7 @@ const employeeSchema = new Schema<IEmployee>(
     },
 
     name: Schema.Types.Mixed,
+
     residentIdNumber: {
       type: Schema.Types.Mixed,
       required: true,
@@ -77,15 +126,17 @@ const employeeSchema = new Schema<IEmployee>(
     avatarPublicId: Schema.Types.Mixed,
 
     passport: Schema.Types.Mixed,
-
     healthInsurance: Schema.Types.Mixed,
-
     hajjDetails: Schema.Types.Mixed,
-
     qrData: Schema.Types.Mixed,
 
     iqamaImage: Schema.Types.Mixed,
     iqamaPublicId: Schema.Types.Mixed,
+
+    passkeys: {
+      type: [passkeySchema],
+      default: [],
+    },
   },
   {
     timestamps: true,
