@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
+
 import { Admin } from "../models/Admin";
 import { signToken } from "../utils/token";
 import { createSession } from "../utils/createSession";
@@ -41,33 +42,43 @@ export const adminLogin = async (
             return;
         }
 
+        /*
+         * Keep the exact database role.
+         *
+         * Admin      -> admin
+         * Super Admin -> superadmin
+         */
+        const actualRole =
+            admin.role === "superadmin"
+                ? "superadmin"
+                : "admin";
+
         const session = await createSession(
             req,
             admin.email,
             admin.name,
-            admin.role === "superadmin"
-                ? "superadmin"
-                : "admin"
+            actualRole
         );
 
         const token = signToken({
             userId: admin._id.toString(),
-            role: "admin",
+            role: actualRole,
             sessionId: session._id.toString(),
         });
 
         res.json({
             message: "Admin login successful",
             token,
+            role: actualRole,
             admin: {
                 id: admin._id,
                 name: admin.name,
                 email: admin.email,
-                role: admin.role,
+                role: actualRole,
             },
         });
     } catch (error) {
-        console.error(error);
+        console.error("ADMIN LOGIN ERROR:", error);
 
         res.status(500).json({
             message: "Admin login failed",

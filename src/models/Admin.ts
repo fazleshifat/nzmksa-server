@@ -1,6 +1,20 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, {
+    Document,
+    Schema,
+} from "mongoose";
 
-export type AdminRole = "admin" | "superadmin";
+export type AdminRole =
+    | "admin"
+    | "superadmin";
+
+export interface IAdminPasskey {
+    credentialId: string;
+    publicKey: Buffer;
+    counter: number;
+    transports?: string[];
+    deviceType?: string;
+    backedUp?: boolean;
+}
 
 export interface IAdmin extends Document {
     name: string;
@@ -8,51 +22,104 @@ export interface IAdmin extends Document {
     password: string;
     role: AdminRole;
     active: boolean;
+
+    passkeys?: IAdminPasskey[];
+
     createdAt: Date;
     updatedAt: Date;
 }
 
-const adminSchema = new Schema<IAdmin>(
-    {
-        name: {
-            type: String,
-            required: true,
-            trim: true,
-        },
+const passkeySchema =
+    new Schema<IAdminPasskey>(
+        {
+            credentialId: {
+                type: String,
+                required: true,
+            },
 
-        email: {
-            type: String,
-            required: true,
-            unique: true,
-            index: true,
-            lowercase: true,
-            trim: true,
-        },
+            publicKey: {
+                type: Buffer,
+                required: true,
+            },
 
-        password: {
-            type: String,
-            required: true,
-            select: false,
-        },
+            counter: {
+                type: Number,
+                required: true,
+                default: 0,
+            },
 
-        role: {
-            type: String,
-            enum: ["admin", "superadmin"],
-            default: "admin",
-            required: true,
-        },
+            transports: {
+                type: [String],
+                default: undefined,
+            },
 
-        active: {
-            type: Boolean,
-            default: true,
+            deviceType: {
+                type: String,
+            },
+
+            backedUp: {
+                type: Boolean,
+                default: false,
+            },
         },
-    },
-    {
-        timestamps: true,
-        collection: "admins",
-    }
-);
+        {
+            _id: false,
+        }
+    );
+
+const adminSchema =
+    new Schema<IAdmin>(
+        {
+            name: {
+                type: String,
+                required: true,
+                trim: true,
+            },
+
+            email: {
+                type: String,
+                required: true,
+                unique: true,
+                index: true,
+                lowercase: true,
+                trim: true,
+            },
+
+            password: {
+                type: String,
+                required: true,
+                select: false,
+            },
+
+            role: {
+                type: String,
+                enum: [
+                    "admin",
+                    "superadmin",
+                ],
+                default: "admin",
+                required: true,
+            },
+
+            active: {
+                type: Boolean,
+                default: true,
+            },
+
+            passkeys: {
+                type: [passkeySchema],
+                default: [],
+            },
+        },
+        {
+            timestamps: true,
+            collection: "admins",
+        }
+    );
 
 export const Admin =
     mongoose.models.Admin ||
-    mongoose.model<IAdmin>("Admin", adminSchema);
+    mongoose.model<IAdmin>(
+        "Admin",
+        adminSchema
+    );
