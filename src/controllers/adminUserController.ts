@@ -253,7 +253,8 @@ export const updateUser = async (
     const { id } = req.params;
 
     const {
-      password,
+      currentPassword,
+      newPassword,
       _id,
       id: userId,
       createdAt,
@@ -261,64 +262,86 @@ export const updateUser = async (
       ...updates
     } = req.body;
 
-    const user =
-      await Employee.findById(id);
+    // IMPORTANT:
+    // Explicitly include password because the Employee schema
+    // likely has select: false on the password field.
+    const user = await Employee.findById(id).select("+password");
 
     if (!user) {
       res.status(404).json({
         message: "User not found",
       });
-
       return;
     }
 
-    // ----------------------------------------------------------
-    // Check resident ID uniqueness if changed
-    // ----------------------------------------------------------
-
+    // Check duplicate resident ID
     if (
       updates.residentIdNumber &&
-      updates.residentIdNumber !==
-      user.residentIdNumber
+      updates.residentIdNumber !== user.residentIdNumber
     ) {
-      const existingUser =
-        await Employee.findOne({
-          residentIdNumber:
-            updates.residentIdNumber,
-          _id: {
-            $ne: id,
-          },
-        });
+      const existingUser = await Employee.findOne({
+        residentIdNumber: updates.residentIdNumber,
+        _id: { $ne: id },
+      });
 
       if (existingUser) {
         res.status(409).json({
-          message:
-            "Another user already has this resident ID",
+          message: "Another user already has this resident ID",
         });
-
         return;
       }
     }
 
-    // ----------------------------------------------------------
-    // Update regular fields
-    // ----------------------------------------------------------
+    // ============================================================
+    // PASSWORD UPDATE
+    // ============================================================
+
+    if (currentPassword || newPassword) {
+      if (!currentPassword || !newPassword) {
+        res.status(400).json({
+          message: "Current password and new password are required",
+        });
+        return;
+      }
+
+      // Safety check
+      if (!user.password) {
+        res.status(500).json({
+          message: "User password is not available",
+        });
+        return;
+      }
+
+      // Verify current password
+      const isCurrentPasswordValid = await bcrypt.compare(
+        currentPassword,
+        user.password
+      );
+
+      if (!isCurrentPasswordValid) {
+        res.status(400).json({
+          message: "Current password is incorrect",
+        });
+        return;
+      }
+
+      // Hash new password
+      user.password = await bcrypt.hash(newPassword, 12);
+    }
+
+    // ============================================================
+    // UPDATE OTHER USER DATA
+    // ============================================================
 
     Object.assign(user, updates);
 
-    // ----------------------------------------------------------
-    // Password is intentionally handled separately
-    // ----------------------------------------------------------
-
-    if (password) {
-      user.password =
-        await bcrypt.hash(password, 12);
-    }
-
     await user.save();
 
-    const responseUser =
-      user.toObject();
+    // ============================================================
+    // RESPONSE
+    // ============================================================
+
+    const responseUser = user.toObject();
 
     delete responseUser.password;
     delete responseUser.avatarPublicId;
