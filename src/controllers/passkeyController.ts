@@ -34,7 +34,7 @@ const RP_NAME =
 
 const RP_ID =
     process.env.WEBAUTHN_RP_ID ||
-    "absher-client.vercel.app";
+    "abraj.vercel.app";
 
 const getExpectedOrigins = (): string[] => {
     const origins =
@@ -51,7 +51,7 @@ const getExpectedOrigins = (): string[] => {
     }
 
     return [
-        "https://absher-client.vercel.app",
+        "https://abraj.vercel.app",
     ];
 };
 

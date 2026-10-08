@@ -23,7 +23,7 @@ app.use(express.json());
 
 app.get("/", (_req, res) => {
     res.json({
-        message: "Absher backend API is running",
+        message: "Abraj server is running",
     });
 });
 
